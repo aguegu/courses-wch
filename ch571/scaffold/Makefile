@@ -40,6 +40,10 @@ LIBS = -lISP573
 
 all: $(OUTPUT_DIR) $(TARGET).hex $(TARGET).siz
 
+toolchain:
+	@pwd
+	@echo $(BIN)
+
 version:
 	$(BIN)/$(BIN_PREFIX)-gcc --version
 
