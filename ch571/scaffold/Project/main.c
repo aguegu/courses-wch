@@ -1,4 +1,3 @@
-// WCH ch571: Flash 192K, RAM: 18K
 #include "CH57x_common.h"
 
 void main() {
