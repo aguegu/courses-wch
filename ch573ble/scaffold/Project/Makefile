@@ -3,8 +3,9 @@ BIN_PREFIX = riscv-wch-elf
 
 CFLAGS 	= -march=rv32imac -mabi=ilp32 -mcmodel=medany -msmall-data-limit=8 -mno-save-restore -fmax-errors=20 -Os -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections -fno-common -Wunused -g -fdiagnostics-color=always
 
-SCAFFOLD_ROOT = ../../scaffold
+DEFINES = -DDEBUG=1
 
+SCAFFOLD_ROOT = ../../scaffold
 SCAFFOLD_DIST = $(SCAFFOLD_ROOT)/dist
 
 OUTPUT_DIR = ./dist
@@ -12,6 +13,7 @@ OUTPUT_DIR = ./dist
 TARGET     = $(addprefix $(OUTPUT_DIR)/, $(notdir $(CURDIR)))
 
 Project_ROOT    = .
+Project_INC_DIR = $(Project_ROOT)
 Project_SRC_DIR = $(Project_ROOT)
 Project_SOURCES = $(notdir $(wildcard $(Project_SRC_DIR)/*.c))
 Project_OBJECTS = $(addprefix $(OUTPUT_DIR)/, $(Project_SOURCES:.c=.o))
@@ -23,20 +25,27 @@ RVMSIS_OBJECTS  = $(addprefix $(SCAFFOLD_DIST)/, $(RVMSIS_SOURCES:.c=.o))
 StdPeriphDriver_ROOT    = $(SCAFFOLD_ROOT)/StdPeriphDriver
 StdPeriphDriver_INC_DIR = $(StdPeriphDriver_ROOT)/inc
 StdPeriphDriver_SRC_DIR = $(StdPeriphDriver_ROOT)
-StdPeriphDriver_SOURCES  = $(notdir $(wildcard $(StdPeriphDriver_SRC_DIR)/*.c))
+StdPeriphDriver_SOURCES = $(notdir $(wildcard $(StdPeriphDriver_SRC_DIR)/*.c))
 StdPeriphDriver_OBJECTS = $(addprefix $(SCAFFOLD_DIST)/, $(StdPeriphDriver_SOURCES:.c=.o))
 
 Startup_ROOT		= $(SCAFFOLD_ROOT)/Startup
 Startup_SOURCES = startup_CH573.S
 Startup_OBJECTS = $(addprefix $(SCAFFOLD_DIST)/asm/, $(Startup_SOURCES:.S=.o))
 
+BLELIB_ROOT = $(SCAFFOLD_ROOT)/LIB
+
+HAL_ROOT	=	$(SCAFFOLD_ROOT)/HAL
+HAL_INC_DIR	 	= $(HAL_ROOT)/include
+HAL_SOURCES 	= $(notdir $(wildcard $(HAL_ROOT)/*.c))
+HAL_OBJECTS 	= $(addprefix $(SCAFFOLD_DIST)/, $(HAL_SOURCES:.c=.o))
+
 LINK_FILE = $(SCAFFOLD_ROOT)/Ld/Link.ld
 
-INCLUDES = -I $(StdPeriphDriver_INC_DIR) -I $(RVMSIS_ROOT)
+INCLUDES = -I $(StdPeriphDriver_INC_DIR) -I $(RVMSIS_ROOT) -I $(BLELIB_ROOT) -I $(HAL_INC_DIR) -I $(Project_INC_DIR)
 
-VPATH = $(Project_SRC_DIR):$(StdPeriphDriver_SRC_DIR):$(Startup_ROOT):$(RVMSIS_ROOT)
+VPATH = $(Project_SRC_DIR):$(StdPeriphDriver_SRC_DIR):$(Startup_ROOT):$(RVMSIS_ROOT):$(HAL_ROOT)
 
-LIBS = -lISP573
+LIBS = -lISP573 -lCH57xBLE
 
 all: $(OUTPUT_DIR) $(TARGET).hex $(TARGET).siz
 
@@ -64,10 +73,11 @@ $(SCAFFOLD_DIST)/%.o: %.c
 $(OUTPUT_DIR)/%.o: %.c
 	$(BIN)/$(BIN_PREFIX)-gcc $(CFLAGS) $(INCLUDES) $(DEFINES) -std=gnu99 -MMD -MP -MF "$(@:%.o=%.d)" -MT $@ -c -o "$@" "$<"
 
-$(TARGET).elf: $(Project_OBJECTS) $(StdPeriphDriver_OBJECTS) $(Startup_OBJECTS) $(RVMSIS_OBJECTS)
+$(TARGET).elf: $(Project_OBJECTS) $(StdPeriphDriver_OBJECTS) $(Startup_OBJECTS) $(RVMSIS_OBJECTS) $(HAL_OBJECTS)
 	$(BIN)/$(BIN_PREFIX)-gcc $(CFLAGS) \
 		-T "$(LINK_FILE)" -nostartfiles -Xlinker --gc-sections \
-		-L"$(StdPeriphDriver_ROOT)" \
+		-L "$(StdPeriphDriver_ROOT)" \
+		-L "$(BLELIB_ROOT)" \
 		-Xlinker --print-memory-usage -Wl,-Map,"$(@:%.elf=%.map)" --specs=nano.specs --specs=nosys.specs -o $@ $^ $(LIBS)
 
 $(TARGET).hex: $(TARGET).elf

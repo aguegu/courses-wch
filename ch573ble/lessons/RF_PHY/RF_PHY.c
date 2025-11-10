@@ -179,6 +179,7 @@ void RF_Init(void)
     rfConfig.RxMaxlen = 251;
     state = RF_Config(&rfConfig);
     PRINT("rf 2.4g init: %x\n", state);
+    
     { // RX mode
         state = RF_Rx(TX_DATA, 10, 0xFF, 0xFF);
         PRINT("RX mode.state = %x\n", state);
